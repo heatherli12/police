@@ -1,6 +1,6 @@
 ---
 title: "Police Complaints"
-author: "David Kane"
+author: "Heather Li"
 date: "6/6/2021"
 output: html_document
 ---
@@ -8,6 +8,13 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
+library(primer.data)
+library(lubridate)
+library(janitor)
+library(skimr)
+library(nycflights13)
+library(gapminder)
+library(fivethirtyeight)
 
 # It is somewhat sloppy to include a read_csv() command in the setup chunk.
 # Normally, we would just load libraries here. However, we have not learned
@@ -17,10 +24,17 @@ library(tidyverse)
 
 raw_data <- read_csv("https://raw.githubusercontent.com/Financial-Times/police-misconduct-complaints-analysis/main/output/philly_clean.csv") %>% 
   select(officer_id) 
+
+nyc <- read_csv("https://raw.githubusercontent.com/Financial-Times/police-misconduct-complaints-analysis/main/output/nyc_clean.csv") %>% 
+  select(OfficerID)
+
+chicago <- read_csv("https://raw.githubusercontent.com/Financial-Times/police-misconduct-complaints-analysis/main/output/chicago_clean.csv") %>% 
+  select(UID)
+
 ```
 
 
-```{r, clean_data}
+```{r, clean_data, echo = FALSE}
 
 # This code makes a table that lets us know how many times each officer id appeared 
 # in the tibble, i.e. how many complaints each officer has.
@@ -48,7 +62,36 @@ clean_data <- raw_data %>%
 # calculate. Then, we only keep around the variables we need for the plot.
   
   mutate(compl_perc = compl_total / sum(compl_total)) %>% 
-  select(compl_dec, compl_perc)
+  select(compl_dec, compl_perc) %>% 
+  mutate(city = "Philadelphia")
+```
+
+```{r, nyc, echo = FALSE}
+clean_nyc <- nyc %>% 
+  group_by(OfficerID) %>% 
+  summarise(total = n()) %>% 
+  mutate(compl_dec = ntile(total, 10)) %>% 
+  group_by(compl_dec) %>% 
+  summarize(compl_total = sum(total)) %>% 
+  mutate(compl_perc = compl_total / sum(compl_total)) %>% 
+  select(compl_dec, compl_perc) %>% 
+  mutate(city = "New York City")
+```
+
+```{r,chicago, echo = FALSE}
+clean_chicago <- chicago %>% 
+  group_by(UID) %>% 
+  summarise(total = n()) %>% 
+  mutate(compl_dec = ntile(total, 10)) %>% 
+  group_by(compl_dec) %>% 
+  summarize(compl_total = sum(total)) %>% 
+  mutate(compl_perc = compl_total / sum(compl_total)) %>% 
+  select(compl_dec, compl_perc) %>% 
+  mutate(city = "Chicago")
+```
+
+```{r, joining, echo = FALSE}
+final_data <- bind_rows(clean_chicago, clean_nyc, clean_data)
 ```
 
 ```{r, plot_data}
@@ -57,15 +100,18 @@ clean_data <- raw_data %>%
 # often easier to split your work up into separate parts, the better to make
 # sure that each part is doing what you want.
 
-clean_data %>% 
-  ggplot(aes(x = compl_dec, y = compl_perc)) +
+final_data %>% 
+  ggplot(aes(x = compl_dec, y = compl_perc, fill = if_else(compl_dec == 10, "light blue", "gray"))) +
     geom_col() +
-    labs(title = "Distribution of Police Complaints in Philadelphia",
+    labs(title = "Distribution of Police Complaints in Major Cities",
          subtitle = "A tenth of officers get a third of the complaints",
          x = "Complaint Decile",
          y = NULL,
-         caption = "Data from Financial Times") +
+         caption = "Financial Times (2021)") +
     scale_x_continuous(breaks = 1:10) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1))+
+    facet_wrap(~city,nrow = 1)+
+    theme_classic()+
+    theme(legend.position = "none")
 ```
 
