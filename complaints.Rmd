@@ -15,6 +15,7 @@ library(skimr)
 library(nycflights13)
 library(gapminder)
 library(fivethirtyeight)
+library(ggthemes)
 
 # It is somewhat sloppy to include a read_csv() command in the setup chunk.
 # Normally, we would just load libraries here. However, we have not learned
@@ -101,17 +102,18 @@ final_data <- bind_rows(clean_chicago, clean_nyc, clean_data)
 # sure that each part is doing what you want.
 
 final_data %>% 
-  ggplot(aes(x = compl_dec, y = compl_perc, fill = if_else(compl_dec == 10, "light blue", "gray"))) +
-    geom_col() +
-    labs(title = "Distribution of Police Complaints in Major Cities",
-         subtitle = "A tenth of officers get a third of the complaints",
-         x = "Complaint Decile",
+  ggplot(aes(x = compl_dec, y = compl_perc)) +
+    geom_col(fill = if_else(final_data$compl_dec == 10, "#7FD4E6", "#00558F")) +
+    labs(title = "In several US cities, a small group of officers generate a\ndisproportionate share of misconduct complaints",
+         subtitle = "Distribution of civilian misconduct complaints, by decile",
+         x = "Officers are ranked by number of complaints and grouped into deciles",
          y = NULL,
-         caption = "Financial Times (2021)") +
+         caption = "Data for Chicago and New York are from 2007 to 2017 and include only closed complaints\nData for Philadelphia are from April 2015 to March 2021 and include pending complaints\nSources: Invisible Institute (Chicago); New York Civil Liberties Union (New York); OpenDataPhilly and\nSam Learner (Philadelphia)") +
     scale_x_continuous(breaks = 1:10) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1))+
     facet_wrap(~city,nrow = 1)+
-    theme_classic()+
-    theme(legend.position = "none")
+    theme_economist()+
+    theme(legend.position = "none")+
+    theme(plot.background = element_rect(fill = "#FFF0E3"))
 ```
 
